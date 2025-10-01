@@ -1,0 +1,8 @@
+.env
+*.json
+*.csv
+*.txt
+*.pem
+secrets/
+VNCoreNLP/
+*.log
