@@ -11,7 +11,10 @@ from supabase import create_client, Client
 from typing import List, Dict, Any, Optional
 import tempfile
 import os
+from dotenv import load_dotenv
 
+
+load_dotenv()
 s3 = boto3.client("s3")
 
 def list_files_recursive(bucket_name = 'legaldocstorage', file_types = None) -> list[str]:
@@ -174,8 +177,8 @@ def query_mysql(query:str):
     return result
 
 #For neo4j
-URI = "neo4j+s://4854812f.databases.neo4j.io"
-AUTH = ("neo4j", "Y3J7Nh_bl6GgzcQH1SusosMAClb3g0fV0900dQ4f6aU")
+URI = os.getenv("NEO4J_URI")
+AUTH = ("neo4j", os.getenv("NEO4J_AUTH"))
 
 def query_neo4j(query: str, **params):
     """

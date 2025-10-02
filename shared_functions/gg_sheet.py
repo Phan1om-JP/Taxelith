@@ -11,9 +11,14 @@ import pandas as pd
 # from oauth2client.service_account import ServiceAccountCredentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+import os
+from dotenv import load_dotenv
+import os
 
-my_google_api_creds = 'D:/Study/Education/Projects/Group_Project_RAG/secrets/ggsheet_credentials.json'
-spreadsheet_id = '1xBgBiA1KwTNdqPfrqH5p_Sf-MhTCXMfy4ousb0WE4Ik' #Default working spreadsheet
+load_dotenv()
+
+my_google_api_creds = os.getenv("GOOGLE_API_CREDS")
+spreadsheet_id = os.getenv("GOOGLE_SHEET_ID") #Default working spreadsheet
 
 def gs_to_df_pandas(tab_name, spreadsheet_id = spreadsheet_id, creds_path=my_google_api_creds):
   gc = gspread.service_account(filename=creds_path)
