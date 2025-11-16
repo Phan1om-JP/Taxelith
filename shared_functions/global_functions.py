@@ -10,13 +10,13 @@ from neo4j import GraphDatabase
 from supabase import create_client, Client
 from typing import List, Dict, Any, Optional
 import tempfile
+from docx2pdf import convert
+import subprocess
 import os
-from dotenv import load_dotenv
 
-
-load_dotenv()
 s3 = boto3.client("s3")
 
+#For S3 file call
 def list_files_recursive(bucket_name = 'legaldocstorage', file_types = None) -> list[str]:
 
     paginator = s3.get_paginator("list_objects_v2")
@@ -30,7 +30,6 @@ def list_files_recursive(bucket_name = 'legaldocstorage', file_types = None) -> 
         return [f for f in files]
     else:
         return [f for f in files if f.lower().endswith(tuple(f".{ft}" for ft in file_types))]
-
 
 def upload_file_to_s3(file_path: str, bucket_name: str = 'legaldocstorage', expire: int = 3600) -> str:
     """
@@ -75,11 +74,13 @@ def download_file_from_s3(bucket_object: str, local_path: str = ''):
     except NoCredentialsError:
         raise Exception("❌ AWS credentials not available")
     
-def get_text_from_s3(bucket_object: str) -> str:
+def get_text_from_s3(object: str) -> str:
     """
     Fetches a file from S3 and returns parsed text.
     Supports: PDF, DOCX, JSON, CSV, TXT
     """
+    bucket_object = f'legaldocstorage/{object}'
+    
     bucket_name, object_name = bucket_object_separator(bucket_object)
 
     try:
@@ -177,8 +178,8 @@ def query_mysql(query:str):
     return result
 
 #For neo4j
-URI = os.getenv("NEO4J_URI")
-AUTH = ("neo4j", os.getenv("NEO4J_AUTH"))
+URI = "neo4j+s://4854812f.databases.neo4j.io"
+AUTH = ("neo4j", "Y3J7Nh_bl6GgzcQH1SusosMAClb3g0fV0900dQ4f6aU")
 
 def query_neo4j(query: str, **params):
     """
@@ -192,7 +193,6 @@ def query_neo4j(query: str, **params):
             database="neo4j"
         )
         return [record.data() for record in records]
-
 
 def dml_ddl_neo4j(query: str, **params):
     """
@@ -212,7 +212,56 @@ def dml_ddl_neo4j(query: str, **params):
             time=summary.result_available_after
         ))
 
+#File format changes
 def save_to_txt(text: str, file_name: str):
     with open(f"D:/Study/Education/Projects/Group_Project/source/document/text_format/{file_name}.txt", "w", encoding="utf-8") as f:
         f.write(text)
     print("File saved as output.txt")
+    
+def docx_to_pdf(input_path, output_path=None):
+    """
+    Convert a .docx file to PDF automatically.
+    
+    Args:
+        input_path (str): Path to the .docx file.
+        output_path (str, optional): Path to save the converted PDF.
+                                    Defaults to same folder as input.
+    """
+    if not input_path.lower().endswith(".docx"):
+        raise ValueError("Only .docx files are supported by docx2pdf")
+
+    # If no output path is specified, use the same directory
+    if output_path is None:
+        output_path = os.path.splitext(input_path)[0] + ".pdf"
+
+    convert(input_path, output_path)
+    os.remove(input_path)
+    
+    print(f"✅ Converted: {input_path} → {output_path} and safely deleted {input_path}")
+
+def doc_to_pdf(input_dir = 'D:/Study/Education/Projects/Group_Project/source/document/original_doc', output_dir='D:/Study/Education/Projects/Group_Project/source/document'):
+    """
+    Convert a .doc file to PDF using LibreOffice.
+    """
+    libreoffice_path = r"C:/Program Files/LibreOffice/program/soffice.exe"
+
+    if not os.path.exists(libreoffice_path):
+        raise FileNotFoundError("LibreOffice not found. Please install it or update the path.")
+
+    input_files = os.listdir(input_dir)
+
+    if len(input_files)>0:
+        for input_path in input_files:
+            input_full_path = f'{input_dir}/{input_path}'
+            subprocess.run([
+                libreoffice_path,
+                "--headless",
+                "--convert-to", "pdf",
+                "--outdir", output_dir,
+                input_full_path
+            ], check=True)
+
+            pdf_path = os.path.join(output_dir, os.path.splitext(os.path.basename(input_full_path))[0] + ".pdf")
+            os.remove(input_full_path)
+            print(f"✅ Converted: {input_full_path} → {pdf_path} and safely deleted {input_full_path}")
+    return pdf_path
